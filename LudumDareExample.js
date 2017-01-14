@@ -137,10 +137,11 @@ const Crawler = require('./Crawler');
 let crawler = new Crawler({
     name : "LudumDare",
     extractors:{ ludum, gameList, gamePage },
+    maxSimultRequest : 20,
     starterUrls : {
         type: "ludum",
         id:BASE_URL+"?action=preview"
-    }
+    },
 });
 
 crawler.start();

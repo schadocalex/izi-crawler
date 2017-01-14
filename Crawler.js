@@ -19,6 +19,7 @@ class Crawler {
     /**
      *
      * @param {Object} params
+     * @param {int} params.maxSimultRequest maximum amount of simultaneous request
      * @param {string} params.name name of the database
      * @param {Object} params.extractors functions to extract data from webpages
      * @param {Array<Object>|Object} params.starterUrls urls from which to start the crawling
@@ -28,6 +29,7 @@ class Crawler {
         this.extractors = params.extractors || {};
         this.addUrl(params.starterUrls);
         this.started = false;
+        this.maxSimultRequest = params.maxSimultRequest || 1;
         manageExit(this.db);
     }
 
@@ -45,8 +47,9 @@ class Crawler {
             process.exit();
         }
         this.timeSteps = [];
-        this.timeStepsMap = new Map();
-        this._crawlNext();
+        for(var i = 0; i < this.maxSimultRequest; ++i) {
+            this._crawlNext();
+        }
     }
 
     _crawlNext(){
@@ -59,7 +62,7 @@ class Crawler {
             console.error("There's no callback for '" + url.type + "'! You need to create one and give it to the constructor. It's izi!");
             process.exit(1);
         }
-        this.timeStepsMap.set(url.id,Date.now());
+        var startTime = Date.now();
         request(url.id, (error, response, body) => {
             if (!error && response.statusCode == 200) {
 
@@ -77,13 +80,12 @@ class Crawler {
 
                     this.displayProgressInfo(url.id);
 
-                    this.timeSteps.push( Date.now() - this.timeStepsMap.get(url.id) );
-                    if(this.timeSteps.length > 15){
+                    this.timeSteps.push( Date.now() - startTime );
+                    if(this.timeSteps.length > 30){
                         this.timeSteps.shift();
                     }
                 }
 
-                this.timeStepsMap.delete(url.id);
                 this._crawlNext();
             }
             else {
@@ -99,7 +101,7 @@ class Crawler {
         var nbTotal =  visitedNb + unvisitedNb ;
 
         var averageRequestDuration = this.timeSteps.reduce(function(a, b) { return a + b;}, 0)/this.timeSteps.length;
-        var leftTime = averageRequestDuration*unvisitedNb;
+        var leftTime = averageRequestDuration*unvisitedNb/this.maxSimultRequest;
 
         console.log("page received ( "+ visitedNb + "/"+ nbTotal + "  "+ Math.round(visitedNb/nbTotal*100) + "% ) : "+url);
         console.log("The crawling should be done " + moment().add(leftTime, 'ms').fromNow());
