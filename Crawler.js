@@ -61,11 +61,16 @@ class Crawler {
                 console.log("page received : "+url.id);
                 var extracted = this.extractors[url.type](cheerio.load(body),url.id);
 
-                this.addUrl(extracted.urls);
-                this.addNode(extracted.nodes);
+                if ( extracted.isValid === false )
+                {
+                    console.log("Page invalid at : " + url.id );
+                }
+                else {
+                    this.addUrl(extracted.urls);
+                    this.addNode(extracted.nodes);
 
-                this.db.setUrlVisited(url.id);
-
+                    this.db.setUrlVisited(url.id);
+                }
 
                 this._crawlNext();
             }

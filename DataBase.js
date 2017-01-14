@@ -20,12 +20,12 @@ var QUERY = {
         CREATE_TABLE: "CREATE TABLE IF NOT EXISTS Url (" +
         "   id          text    PRIMARY KEY," +
         "   type        varchar(32)," +
-        "   visited     integer" +
+        "   visited     boolean" +
         ")",
         TRUNCATE_TABLE: "DELETE FROM Url",
         INSERT: "INSERT INTO Url (id, type, visited) VALUES(?, ?, 0)",
         GET: "SELECT * FROM Url WHERE id = ?",
-        GET_UNVISITED: "SELECT * FROM Url WHERE visited = 0 LIMIT ?",
+        GET_UNVISITED: "SELECT * FROM Url WHERE visited = 0 ORDER BY RANDOM() LIMIT ?",
         SET_VISITED: "UPDATE Url SET visited = 1 WHERE id = ?"
     },
     DB: {
