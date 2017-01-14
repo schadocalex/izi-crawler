@@ -17,11 +17,11 @@ describe('DataBase', function(){
     });
     describe('.getNode(id)',function(){
         it('should get the node previously created',function(){
-            expect(db.getNode("lol")).to.have.property("id");
+            expect(db.getNode("lol")).to.be.instanceOf(Object);
             expect(db.getNode("lol").id).to.equal("lol");
         });
         it('should not return a node that does not exists',function(){
-            expect(db.getNode("etc")).to.not.have.property("id");
+            expect(db.getNode("etc")).to.be.undefined;
         });
     })
 });

@@ -27,8 +27,19 @@ var QUERY = {
         GET: "SELECT * FROM Url WHERE id = ?",
         GET_UNVISITED: "SELECT * FROM Url WHERE visited = 0 LIMIT ?",
         SET_VISITED: "UPDATE Url SET visited = 1 WHERE id = ?"
+    },
+    DB: {
+        EXPLORED_PERCENT : "Select visited from url group by visited"
     }
 };
+
+function returnAsObject(obj){
+    if(obj.id === undefined) {
+        return undefined;
+    } else {
+        return obj;
+    }
+}
 
 class DataBase {
 
@@ -69,7 +80,9 @@ class DataBase {
             getUrl : this.db.prepare(QUERY.URL.GET),
             getUnvisitedUrl : this.db.prepare(QUERY.URL.GET_UNVISITED),
             insertUrl : this.db.prepare(QUERY.URL.INSERT),
-            setUrlVisited : this.db.prepare(QUERY.URL.SET_VISITED)
+            setUrlVisited : this.db.prepare(QUERY.URL.SET_VISITED),
+
+            getExploredPercent : this.db.prepare(QUERY.DB.EXPLORED_PERCENT)
         };
     }
 
@@ -99,7 +112,7 @@ class DataBase {
      * @param id
      */
     getNode(id) {
-        return this.requests.getNode.getAsObject([id]);
+        return returnAsObject(this.requests.getNode.getAsObject([id]));
     }
 
     /**
@@ -109,7 +122,7 @@ class DataBase {
      * @returns {*}
      */
     insertNode(id, metadata) {
-        if( !this.getNode(id).id ) {
+        if( !this.getNode(id) ) {
             return this.requests.insertNode.run([id, metadata]);
         }
     }
@@ -123,14 +136,14 @@ class DataBase {
      * @param id
      */
     getUrl(id) {
-        return this.requests.getUrl.getAsObject([id]);
+        return returnAsObject(this.requests.getUrl.getAsObject([id]));
     }
 
     /**
      * Return a unvisited url
      */
     getUnvisitedUrl() {
-        return this.requests.getUnvisitedUrl.getAsObject([1]);
+        return returnAsObject(this.requests.getUnvisitedUrl.getAsObject([1]));
     }
 
     /**
@@ -140,13 +153,13 @@ class DataBase {
      * @returns {*}
      */
     insertUrl(id, type) {
-        if( !this.getUrl(id).id ) {
+        if( !this.getUrl(id) ) {
             return this.requests.insertUrl.run([id, type]);
         }
     }
 
     setUrlVisited(id) {
-        if( this.getUrl(id).id ) {
+        if( this.getUrl(id) ) {
             return this.requests.setUrlVisited.run([id]);
         }
     }

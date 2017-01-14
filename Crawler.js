@@ -1,12 +1,13 @@
 /**
  * Created by Alexis on 12/05/2016.
  */
+
 "use strict";
 
 const DB = require('./DataBase');
 const process = require("process");
 const request = require("request");
-const $ = require("jquery");
+const cheerio = require("cheerio");
 
 class Crawler {
 
@@ -14,44 +15,91 @@ class Crawler {
     // Database methods
     //////////////////////////////////////////////////
 
-    constructor(opt) {
-        opt = opt || {};
-
-        this.db = new DB(opt.name || ":memory:");
-        this.callbacks = opt.callbacks || {};
+    /**
+     *
+     * @param {Object} params
+     * @param {string} params.name name of the database
+     * @param {Object} params.extractors functions to extract data from webpages
+     * @param {Array<Object>|Object} params.starterUrls urls from which to start the crawling
+     */
+    constructor(params = {}) {
+        this.db = new DB(params.name || ":memory:");
+        this.extractors = params.extractors || {};
+        this.addUrl(params.starterUrls);
+        this.started = false;
         manageExit(this.db);
     }
 
     start() {
         if(this.started === false) {
             this.started = true;
-            this.startCrawling();
+            this._startCrawling();
         }
     }
 
-    crawl(url) {
-        this.addUrl(url);
-        this.start();
+    _startCrawling() {
+        var url = this.db.getUnvisitedUrl();
+        if( !url ){
+            console.warn("Nothing to crawl. You might want to add some starter Urls.");
+            process.exit();
+        }
+        this._crawlNext();
     }
 
-    startCrawling() {
-        var url = this.db.getUnvisitedURL();
-        if(this.callbacks[url.type] == null) {
+    _crawlNext(){
+        var url = this.db.getUnvisitedUrl();
+        if( !url ){
+            console.log("nothing else to crawl.");
+            process.exit();
+        }
+        if(this.extractors[url.type] == null) {
             console.error("There's no callback for '" + url.type + "'! You need to create one and give it to the constructor. It's izi!");
             process.exit(1);
         }
-        request(url.id, function (error, response, body) {
+        request(url.id, (error, response, body) => {
             if (!error && response.statusCode == 200) {
-                this.callbacks[url.type]($.parseHTML(body));
+                console.log("page received : "+url.id);
+                var extracted = this.extractors[url.type](cheerio.load(body),url.id);
+
+                this.addUrl(extracted.urls);
+                this.addNode(extracted.nodes);
+
+                this.db.setUrlVisited(url.id);
+
+
+                this._crawlNext();
+            }
+            else {
+                throw new Error(error)
             }
         });
     }
 
-    addUrl(URL) {
-        if(Array.isArray(URL)) {
-            return URL.map((URL) => this.addUrl(URL));
+
+
+    addUrl(url) {
+        if( !url ) return;
+
+        if(Array.isArray(url)) {
+            return url.map((url) => this.addUrl(url));
         }
-        this.db.insertURL(URL, "type", false);
+        this.db.insertUrl(url.id,url.type);
+    }
+
+    addNode(node) {
+        if( !node ) return;
+
+        if(Array.isArray(node)) {
+            return node.map((url) => this.addNode(url));
+        }
+        let metadata;
+        if( node.metadata instanceof Object || Array.isArray( node.metadata ) ){
+            metadata = JSON.stringify(node.metadata);
+        }
+        else{
+            metadata = node.metadata.toString();
+        }
+        this.db.insertNode(node.id,metadata);
     }
 }
 
@@ -59,7 +107,7 @@ function manageExit(db) {
     //process.stdin.resume();//so the program will not close instantly
     function exitHandler(options, err) {
         if (options.cleanup) db.save();
-        if (err) console.err(err.stack);
+        if (err) console.error(err.stack);
         if (options.exit) process.exit();
     }
     process.on('exit', exitHandler.bind(null,{cleanup:true}));
