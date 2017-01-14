@@ -19,6 +19,8 @@
   "dependencies": {
     "cheerio": "^0.22.0",
     "moment": "^2.17.1",
+    "lodash": "^4.17.4",
+    "proxy-lists": "^1.10.0",
     "request": "^2.79.0",
     "sql.js": "^0.4.0"
   },

@@ -9,6 +9,7 @@ const process = require("process");
 const request = require("request");
 const cheerio = require("cheerio");
 const moment = require("moment");
+const ProxyManager = require("./ProxyManager");
 
 class Crawler {
 
@@ -21,6 +22,7 @@ class Crawler {
      * @param {Object} params
      * @param {int} params.maxSimultRequest maximum amount of simultaneous request
      * @param {string} params.name name of the database
+     * @param {string} params.useProxy
      * @param {Object} params.extractors functions to extract data from webpages
      * @param {Array<Object>|Object} params.starterUrls urls from which to start the crawling
      */
@@ -29,6 +31,7 @@ class Crawler {
         this.extractors = params.extractors || {};
         this.addUrl(params.starterUrls);
         this.started = false;
+        this.useProxy = params.useProxy;
         this.maxSimultRequest = params.maxSimultRequest || 1;
         manageExit(this.db);
     }
@@ -36,7 +39,13 @@ class Crawler {
     start() {
         if(this.started === false) {
             this.started = true;
-            this._startCrawling();
+            if(this.useProxy) {
+                this.proxyManager = new ProxyManager(() => {
+                    this._startCrawling();
+                });
+            } else {
+                this._startCrawling();
+            }
         }
     }
 
@@ -62,8 +71,20 @@ class Crawler {
             console.error("There's no callback for '" + url.type + "'! You need to create one and give it to the constructor. It's izi!");
             process.exit(1);
         }
+
         var startTime = Date.now();
-        request(url.id, (error, response, body) => {
+
+        let proxyUrl;
+        let proxy;
+        if(this.useProxy) {
+            proxy = this.proxyManager.getProxy(),
+            proxyUrl = "http://" + proxy.ipAddress + ":" + proxy.port;
+        }
+        request({
+            uri: url.id,
+            proxy: proxyUrl,
+            timeout: 5000
+        }, (error, response, body) => {
             if (!error && response.statusCode == 200) {
 
                 var extracted = this.extractors[url.type](cheerio.load(body),url.id);
@@ -89,13 +110,18 @@ class Crawler {
                 this._crawlNext();
             }
             else {
-                throw new Error(error)
+                if(this.useProxy) {
+                    proxy.score--;
+                    console.log("proxy "+proxyUrl+" failed from " + proxy.source + ".");
+                    this._crawlNext();
+                } else {
+                    throw new Error(error);
+                }
             }
         });
     }
 
     displayProgressInfo(url){
-
         var visitedNb = this.db.getVisitedNumber();
         var unvisitedNb = this.db.getUnvisitedNumber();
         var nbTotal =  visitedNb + unvisitedNb ;
@@ -106,8 +132,6 @@ class Crawler {
         console.log("page received ( "+ visitedNb + "/"+ nbTotal + "  "+ Math.round(visitedNb/nbTotal*100) + "% ) : "+url);
         console.log("The crawling should be done " + moment().add(leftTime, 'ms').fromNow());
         console.log();
-
-
     }
 
     addUrl(url) {
