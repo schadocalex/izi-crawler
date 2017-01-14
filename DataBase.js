@@ -29,7 +29,8 @@ var QUERY = {
         SET_VISITED: "UPDATE Url SET visited = 1 WHERE id = ?"
     },
     DB: {
-        EXPLORED_PERCENT : "Select visited from url group by visited"
+        VISITED_NUMBER : "SELECT count(visited) as visitedNumber from url where visited=1",
+        UNVISITED_NUMBER : "SELECT count(visited) as unvisitedNumber from url where visited=0"
     }
 };
 
@@ -82,7 +83,8 @@ class DataBase {
             insertUrl : this.db.prepare(QUERY.URL.INSERT),
             setUrlVisited : this.db.prepare(QUERY.URL.SET_VISITED),
 
-            getExploredPercent : this.db.prepare(QUERY.DB.EXPLORED_PERCENT)
+            getVisitedNumber : this.db.prepare(QUERY.DB.VISITED_NUMBER),
+            getUnvisitedNumber : this.db.prepare(QUERY.DB.UNVISITED_NUMBER)
         };
     }
 
@@ -101,6 +103,14 @@ class DataBase {
             var buffer = new Buffer(this.db.export());
             fs.writeFileSync(this.filePath, buffer);
         }
+    }
+
+    getVisitedNumber(){
+        return this.requests.getVisitedNumber.getAsObject([]).visitedNumber;
+    }
+
+    getUnvisitedNumber(){
+        return this.requests.getUnvisitedNumber.getAsObject([]).unvisitedNumber;
     }
 
     //////////////////////////////////////////////////

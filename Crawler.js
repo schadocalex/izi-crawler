@@ -58,7 +58,13 @@ class Crawler {
         }
         request(url.id, (error, response, body) => {
             if (!error && response.statusCode == 200) {
-                console.log("page received : "+url.id);
+
+                var visitedNb = this.db.getVisitedNumber();
+                var unvisitedNb = this.db.getUnvisitedNumber();
+                var nbTotal =  visitedNb + unvisitedNb ;
+
+                console.log("page received ( "+ visitedNb + "/"+ nbTotal + "  "+ Math.round(visitedNb/nbTotal*100) + "% ) : "+url.id);
+                console.log();
                 var extracted = this.extractors[url.type](cheerio.load(body),url.id);
 
                 if ( extracted.isValid === false )
