@@ -9,7 +9,7 @@ const SQL = require('sql.js');
 var QUERY = {
     NODE: {
         CREATE_TABLE: "CREATE TABLE IF NOT EXISTS Node (" +
-        "   id          varchar(100)    PRIMARY KEY," +
+        "   id          text   PRIMARY KEY," +
         "   metadata    text" +
         ")",
         TRUNCATE_TABLE: "DELETE FROM Node",
@@ -18,14 +18,15 @@ var QUERY = {
     },
     URL: {
         CREATE_TABLE: "CREATE TABLE IF NOT EXISTS Url (" +
-        "   id          varchar(255)    PRIMARY KEY," +
+        "   id          text    PRIMARY KEY," +
         "   type        varchar(32)," +
-        "   visited     boolean" +
+        "   visited     integer" +
         ")",
         TRUNCATE_TABLE: "DELETE FROM Url",
-        INSERT: "INSERT INTO Url (id, type, visited) VALUES(?, ?, ?)",
+        INSERT: "INSERT INTO Url (id, type, visited) VALUES(?, ?, 0)",
         GET: "SELECT * FROM Url WHERE id = ?",
-        GET_VISITED: "SELECT * FROM Url WHERE visited = ? LIMIT 1"
+        GET_UNVISITED: "SELECT * FROM Url WHERE visited = 0 LIMIT ?",
+        SET_VISITED: "UPDATE Url SET visited = 1 WHERE id = ?"
     }
 };
 
@@ -46,7 +47,8 @@ class DataBase {
             this.filePath = name + ".sqlite";
             try {
                 buffer = fs.readFileSync(this.filePath);
-            } catch(e) {}
+            } catch(e) {
+            }
         }
 
         // Create the database
@@ -55,11 +57,20 @@ class DataBase {
         this.db.run(QUERY.URL.CREATE_TABLE);
 
         // Prepare statements
-        this.nodeGet = this.db.prepare(QUERY.NODE.GET);
-        this.nodeInsert = this.db.prepare(QUERY.NODE.INSERT);
-        this.urlGet = this.db.prepare(QUERY.URL.GET);
-        this.visitedUrlGet = this.db.prepare(QUERY.URL.GET_VISITED);
-        this.urlInsert = this.db.prepare(QUERY.URL.INSERT);
+        /**
+         *
+         * @type {{getNode, insertNode, getUrl, getUnvisitedUrl, insertUrl, setUrlVisited}}
+         * @private
+         */
+        this.requests = {
+            getNode : this.db.prepare(QUERY.NODE.GET),
+            insertNode : this.db.prepare(QUERY.NODE.INSERT),
+
+            getUrl : this.db.prepare(QUERY.URL.GET),
+            getUnvisitedUrl : this.db.prepare(QUERY.URL.GET_UNVISITED),
+            insertUrl : this.db.prepare(QUERY.URL.INSERT),
+            setUrlVisited : this.db.prepare(QUERY.URL.SET_VISITED)
+        };
     }
 
     /**
@@ -88,7 +99,7 @@ class DataBase {
      * @param id
      */
     getNode(id) {
-        return this.nodeGet.getAsObject([id]);
+        return this.requests.getNode.getAsObject([id]);
     }
 
     /**
@@ -98,8 +109,8 @@ class DataBase {
      * @returns {*}
      */
     insertNode(id, metadata) {
-        if(this.getNode(id) == null) {
-            return this.nodeInsert.run([id, metadata]);
+        if( !this.getNode(id).id ) {
+            return this.requests.insertNode.run([id, metadata]);
         }
     }
 
@@ -111,28 +122,32 @@ class DataBase {
      * Return a url with the id
      * @param id
      */
-    getURL(id) {
-        return this.urlGet.getAsObject([id]);
+    getUrl(id) {
+        return this.requests.getUrl.getAsObject([id]);
     }
 
     /**
      * Return a unvisited url
      */
-    getUnvisitedURL() {
-        return this.visitedUrlGet.getAsObject([true]);
+    getUnvisitedUrl() {
+        return this.requests.getUnvisitedUrl.getAsObject([1]);
     }
 
     /**
      * Insert a new url in the database if not exists
      * @param id
-     * @param type
-     * @param visited
+     * @param {string} type
      * @returns {*}
      */
-    insertURL(id, type, visited) {
-        if(this.getURL(id).id == null) {
-            visited = !!visited;
-            return this.urlInsert.run([id, type, visited]);
+    insertUrl(id, type) {
+        if( !this.getUrl(id).id ) {
+            return this.requests.insertUrl.run([id, type]);
+        }
+    }
+
+    setUrlVisited(id) {
+        if( this.getUrl(id).id ) {
+            return this.requests.setUrlVisited.run([id]);
         }
     }
 }
