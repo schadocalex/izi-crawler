@@ -1,12 +1,17 @@
 "use strict";
 
-const DataBase = require("./DataBase");
-const process = require("process");
+const iziCrawler = require("./Crawler");
 
-var db = new DataBase("test");
-manageExit(db);
+var izi = new iziCrawler({
+    name: "test",
+    callbacks: {
 
-db.reset();
-db.insertNode("http://url.com", "metadata");
-var node = db.getNode("http://url.com");
-console.log(node);
+    }
+});
+izi.crawl("http://theaigames.com/competitions/ultimate-tic-tac-toe/game-log/a/1");
+
+
+//db.reset();
+//db.insertNode("http://url.com", "metadata");
+//var node = db.getNode("http://url.com");
+//console.log(node);
