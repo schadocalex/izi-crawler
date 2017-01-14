@@ -1,0 +1,24 @@
+{
+  "name": "izi-crawler",
+  "version": "1.0.0",
+  "description": "Izi crawler",
+  "main": "Crawler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/schadocalex/izi-crawler.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/schadocalex/izi-crawler/issues"
+  },
+  "homepage": "https://github.com/schadocalex/izi-crawler#readme",
+  "dependencies": {
+    "jquery": "^3.1.1",
+    "request": "^2.79.0",
+    "sql.js": "^0.4.0"
+  }
+}
