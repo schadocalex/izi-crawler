@@ -8,6 +8,7 @@ const DB = require('./DataBase');
 const process = require("process");
 const request = require("request");
 const cheerio = require("cheerio");
+const moment = require("moment");
 
 class Crawler {
 
@@ -43,6 +44,8 @@ class Crawler {
             console.warn("Nothing to crawl. You might want to add some starter Urls.");
             process.exit();
         }
+        this.timeSteps = [];
+        this.timeStepsMap = new Map();
         this._crawlNext();
     }
 
@@ -56,15 +59,10 @@ class Crawler {
             console.error("There's no callback for '" + url.type + "'! You need to create one and give it to the constructor. It's izi!");
             process.exit(1);
         }
+        this.timeStepsMap.set(url.id,Date.now());
         request(url.id, (error, response, body) => {
             if (!error && response.statusCode == 200) {
 
-                var visitedNb = this.db.getVisitedNumber();
-                var unvisitedNb = this.db.getUnvisitedNumber();
-                var nbTotal =  visitedNb + unvisitedNb ;
-
-                console.log("page received ( "+ visitedNb + "/"+ nbTotal + "  "+ Math.round(visitedNb/nbTotal*100) + "% ) : "+url.id);
-                console.log();
                 var extracted = this.extractors[url.type](cheerio.load(body),url.id);
 
                 if ( extracted.isValid === false )
@@ -76,8 +74,16 @@ class Crawler {
                     this.addNode(extracted.nodes);
 
                     this.db.setUrlVisited(url.id);
+
+                    this.displayProgressInfo(url.id);
+
+                    this.timeSteps.push( Date.now() - this.timeStepsMap.get(url.id) );
+                    if(this.timeSteps.length > 15){
+                        this.timeSteps.shift();
+                    }
                 }
 
+                this.timeStepsMap.delete(url.id);
                 this._crawlNext();
             }
             else {
@@ -86,7 +92,21 @@ class Crawler {
         });
     }
 
+    displayProgressInfo(url){
 
+        var visitedNb = this.db.getVisitedNumber();
+        var unvisitedNb = this.db.getUnvisitedNumber();
+        var nbTotal =  visitedNb + unvisitedNb ;
+
+        var averageRequestDuration = this.timeSteps.reduce(function(a, b) { return a + b;}, 0)/this.timeSteps.length;
+        var leftTime = averageRequestDuration*unvisitedNb;
+
+        console.log("page received ( "+ visitedNb + "/"+ nbTotal + "  "+ Math.round(visitedNb/nbTotal*100) + "% ) : "+url);
+        console.log("The crawling should be done " + moment().add(leftTime, 'ms').fromNow());
+        console.log();
+
+
+    }
 
     addUrl(url) {
         if( !url ) return;
