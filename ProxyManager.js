@@ -40,7 +40,6 @@ class ProxyManager {
         this.i = this.i % this.proxies.length;
         let proxy = this.proxies[this.i];
         if(proxy.score <= 0) {
-            this.blacklist["http://" + proxy.ipAddress + ":" + proxy.port] = Date.now() + moment.duration(1,"days").valueOf();
             this.proxies.splice(index, 1);
             return this.getProxy();
         }
@@ -51,11 +50,6 @@ class ProxyManager {
     blacklistProxy(proxy)
     {
         this.blacklist["http://" + proxy.ipAddress + ":" + proxy.port] = Date.now() + moment.duration(1,"days").valueOf();
-        let proxyIndex = _.indexOf(this.proxies,proxy);
-        if( proxyIndex != -1 )
-        {
-            this.proxies.splice(proxyIndex, 1);
-        }
     }
 
     _onData(proxies) {
